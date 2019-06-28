@@ -21,12 +21,12 @@ DIRECTION = {
   DOWN: (0, 1)
 }
 SNAKE_SIZE = 60
-SNAKE_INIT_SPEED = 500 # toc do ban dau
-SNAKE_SPEED_DECREASE = 8 # toc do thay doi sau moi lan an tao
+SNAKE_INIT_SPEED = 500 # Initial speed of snake
+SNAKE_SPEED_DECREASE = 8 # The change of speed after eating an apple
 SNAKE_INIT_DIRECTION = RIGHT
 SNAKE_INIT_TAIL_COORD = (120, 300)
 SNAKE_INIT_LENGTH = 3
-APPLE_SIZE = 60 # luon bang voi SNAKE_SIZE
+APPLE_SIZE = 60
 LEADER_BOARD_INIT = {
   "andy": 2,
   "vanh": 4
@@ -43,7 +43,7 @@ class SnakeApp(tk.Tk):
     self.geometry(str(WIDTH) + "x" + str(HEIGHT))
     self.show_screen(MenuScreen)
 
-  # Chuyen sang screen moi
+  # Change to a new screen
   def show_screen(self, Screen):
     if self.cur_frame is not None:
       self.cur_frame.pack_forget()
@@ -51,13 +51,12 @@ class SnakeApp(tk.Tk):
     new_frame.pack()
     self.cur_frame = new_frame
 
-  # Luu lai diem nguoi choi sau khi ket thuc
+  # Save the score of player after game ends
   def save_score(self, score):
     player_name = self.player_name.get()
     self.player_scores[player_name] = max(self.player_scores.get(player_name, 0), score)
 
 
-# Man hinh start game va leader board
 class MenuScreen(tk.Frame):
   def __init__(self, container):
     super().__init__(container)
@@ -72,7 +71,7 @@ class MenuScreen(tk.Frame):
     leader_board_btn = tk.Button(self, text = "Show leaderboard", command=self.popup_leaderboard)
     leader_board_btn.pack(fill = tk.X, pady = 10)
 
-  # Hien len popup leader board
+  # Show the popup with leaderboard chart
   def popup_leaderboard(self):
     popup = tk.Toplevel()
     popup.wm_title("Leaderboard")
@@ -97,7 +96,6 @@ class MenuScreen(tk.Frame):
     back_btn.pack(pady = 10)
 
 
-# Man hinh dien ten nguoi choi
 class EnterNameScreen(tk.Frame):
   def __init__(self, container):
     super().__init__(container)
@@ -112,7 +110,6 @@ class EnterNameScreen(tk.Frame):
     play_btn.pack(pady=10)
 
 
-# Man hinh tro choi
 class GameScreen(tk.Canvas):
   def __init__(self, container):
     super().__init__(container)
@@ -127,14 +124,14 @@ class GameScreen(tk.Canvas):
     self.game_running = True
     self.update()
 
-  # Xu ly khi user an vao ban phim
+  # Handle the key press event from user (left, up, down, right)
   def onKeyPress(self, event):
     key = event.keysym
     for direction in DIRECTION.keys():
       if key == direction:
         self.snake.update_direction(direction)
 
-  # Di chuyen ran va ve lai game
+  # Update the state of game and redraw whole game board
   def update(self):
     if self.game_running:
       # Tinh toan buoc di
@@ -150,20 +147,19 @@ class GameScreen(tk.Canvas):
       
       self.after(self.snake.speed, self.update)
 
-  # ran an duoc tao, tang diem, va tang toc do cua ran len
+  # When snake eats an apple, generate a new apple, change snake's speed and increase score
   def snake_eat_apple(self):
     self.apple.generate_new()
     self.snake.speed -= SNAKE_SPEED_DECREASE
     self.score += 1
 
-  # tro choi ket thuc
+  # When the game end, snake hits its tail or nomore space left
   def game_over(self):
     self.game_running = False
     self.container.save_score(self.score)
     self.container.show_screen(MenuScreen)
 
 
-# Quan ly ran
 class Snake:
   def __init__(self, game_canvas):
     self.game_canvas = game_canvas
@@ -172,45 +168,45 @@ class Snake:
     self.direction = SNAKE_INIT_DIRECTION
     self.speed = SNAKE_INIT_SPEED
 
-    # Tinh toa do ran ban dau
+    # Calculate initial coordinates of snake
     self.coords = [SNAKE_INIT_TAIL_COORD]
     for index in range(1, SNAKE_INIT_LENGTH):
       self.coords = [self.next_coord(self.coords[0], self.direction)] + self.coords
 
-  # Di chuyen ran
+  # Move snake
   def move(self):
     new_head = self.next_coord(self.coords[0], self.direction)
 
-    # Kiem tra neu ran an duoc tao
+    # Check whether snake eats an apple
     if self.check_overlap(new_head, SNAKE_SIZE, self.game_canvas.apple.coord, APPLE_SIZE):
       self.game_canvas.snake_eat_apple()
       self.coords = [new_head] + self.coords
     else:
       self.coords = [new_head] + self.coords[:-1]
 
-    # Kiem tra tu can minh
+    # Check whether snake hits its tail
     for body_coord in self.coords[1:]:
       if self.check_overlap(new_head, SNAKE_SIZE, body_coord, SNAKE_SIZE):
         self.game_canvas.game_over()
 
-    # Kiem tra game ket thuc
+    # Check whether there is no space left
     if (WIDTH // SNAKE_SIZE) * (HEIGHT // SNAKE_SIZE) - 1 == len(self.coords):
       self.game_canvas.game_over()
 
-  # Toa do head cua ran tiep theo
+  # The next coordinate of snake's head
   def next_coord(self, coord, direction):
     return (
       (coord[0] + DIRECTION[direction][0] * SNAKE_SIZE) % WIDTH,
       (coord[1] + DIRECTION[direction][1] * SNAKE_SIZE) % HEIGHT
     )
 
-  # Cap nhat lai huong di chuyen cua ran
+  # Update the moving direction of snake
   def update_direction(self, direction):
     new_head = self.next_coord(self.coords[0], direction)
     if not self.check_overlap(new_head, SNAKE_SIZE, self.coords[1], SNAKE_SIZE):
       self.direction = direction
 
-  # Kien tra 2 o vuong co giao nhau
+  # Check whether 2 blocks intersect
   def check_overlap(self, coord1, size1, coord2, size2):
     x1 = max(coord1[0], coord2[0])
     x2 = min(coord1[0] + size1, coord2[0] + size2)
@@ -218,20 +214,20 @@ class Snake:
     y2 = min(coord1[1] + size1, coord2[1] + size2)
     return x1 < x2 and y1 < y2
 
-  # Ve lai ran
+  # Redraw the snake
   def render(self):
     self.game_canvas.create_image(self.coords[0][0], self.coords[0][1], image=self.headImg, anchor="nw", tag="removable")
     for coord in self.coords[1:]:
       self.game_canvas.create_image(coord[0], coord[1], image=self.bodyImg, anchor="nw", tag="removable")
 
-# Quan ly tao
+
 class Apple:
   def __init__(self, game_canvas):
     self.game_canvas = game_canvas
     self.appleImg = ImageTk.PhotoImage(Image.open("apple.png").resize((APPLE_SIZE, APPLE_SIZE)))
     self.generate_new()
 
-  # Tinh ra toa do moi cua qua tao
+  # Calculate a new coordinate of apple
   def generate_new(self):
     leftover_space = (WIDTH // APPLE_SIZE * HEIGHT // APPLE_SIZE) - len(self.game_canvas.snake.coords)
     next_apple_index = randint(1, leftover_space)
@@ -250,7 +246,7 @@ class Apple:
           self.coord = (x, y)
           return
 
-  # Ve lai tao
+  # Redraw the apple
   def render(self):
     self.game_canvas.create_image(self.coord[0], self.coord[1], image=self.appleImg, anchor="nw", tag="removable")
 
